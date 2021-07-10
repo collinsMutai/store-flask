@@ -11,12 +11,13 @@
 			</div>
 		</div>
 	</div>
+	<!-- Query in-stock and out of stock products -->
 	<div class="col-lg-12">
 		<ul class="summary">
 			<li class="">Pending Orders <span class="badge">5</span></li>
 			<li class="">Completed Orders <span class="badge">3</span></li>
-			<li class="">Products In Stock <span class="badge">7</span></li>
-			<li class="">Products Out of Stock <span class="badge">11</span></li>
+			<li class="">Products In Stock <span class="badge">{{products_in_stock}}</span></li>
+			<li class="">Products Out of Stock <span class="badge">{{products|length - products_in_stock}}</span></li>
 			<li class="">Total Products <span class="badge">{{products|length}}</span></li>
 		</ul>
 	</div>
@@ -94,6 +95,7 @@
 							<th>#</th><th>Name</th><th>Price</th><th>Stock</th>
 						</tr>
 					</thead>
+					<!-- Query available products -->
 					<tbody>
 						{% for product in products %}
 						<tr>

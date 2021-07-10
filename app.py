@@ -51,13 +51,29 @@ class AddProduct(FlaskForm):
 
 
 
+"""
+
+Query available products
+
+"""
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    products = Product.query.all()
 
-@app.route('/product')
-def product():
-    return render_template('view-product.html')
+    return render_template('index.html', products=products)
+
+"""
+
+Filter_by id 
+
+"""
+
+@app.route('/product/<id>')
+def product(id):
+    product = Product.query.filter_by(id=id).first()
+
+    return render_template('view-product.html', product=product)
 
 @app.route('/cart')
 def cart():
@@ -66,12 +82,25 @@ def cart():
 @app.route('/checkout')
 def checkout():
     return render_template('checkout.html')
+    
+
+"""
+
+Query available, in-stock and out of stock products
+
+"""
 
 @app.route('/admin')
 def admin():
     products = Product.query.all()
+    products_in_stock = Product.query.filter(Product.stock > 0).count()
   
-    return render_template('admin/index.html', admin=True, products=products)
+    return render_template('admin/index.html', admin=True, products=products, products_in_stock=products_in_stock)
+
+"""
+Post products to db
+
+"""
 
 @app.route('/admin/add', methods=['GET', 'POST'])
 def add():
