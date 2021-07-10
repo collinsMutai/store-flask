@@ -12,7 +12,7 @@ app = Flask(__name__)
 photos = UploadSet('photos', IMAGES)
 
 app.config['UPLOADED_PHOTOS_DEST'] = 'images'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///trendy.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:7749@localhost:5432/shopdb'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = 'mysecret'
@@ -69,18 +69,24 @@ def checkout():
 
 @app.route('/admin')
 def admin():
-    return render_template('admin/index.html', admin=True)
+    products = Product.query.all()
+  
+    return render_template('admin/index.html', admin=True, products=products)
 
 @app.route('/admin/add', methods=['GET', 'POST'])
 def add():
     form = AddProduct()
 
     if form.validate_on_submit():
-        print(form.name.data)
-        print(form.price.data)
-        print(form.stock.data)
-        print(form.description.data)
-        print(form.image.data)
+        image_url = photos.url(photos.save(form.image.data))
+        new_product = Product(name=form.name.data, price=form.price.data, 
+        stock=form.stock.data, description=form.description.data, image=image_url)
+    
+        db.session.add(new_product)
+        db.session.commit()
+
+        return redirect(url_for('admin'))
+    
     return render_template('admin/add-product.html', admin=True, form=form)
 
 @app.route('/admin/order')
@@ -97,4 +103,4 @@ if __name__ == '__main__':
 # python app.py db init
 # to generate the table 
 # python app.py db migrate
-
+# python app.py db upgrade
