@@ -1,10 +1,10 @@
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 from flask_uploads import UploadSet, configure_uploads, IMAGES
 from flask_wtf import FlaskForm
-from wtforms import IntegerField, StringField, TextAreaField
+from wtforms import IntegerField, StringField, TextAreaField, HiddenField
 from flask_wtf.file import FileField, FileAllowed
 
 app = Flask(__name__)
@@ -49,7 +49,12 @@ class AddProduct(FlaskForm):
     description = TextAreaField('Description')
     image = FileField('Image', validators=[FileAllowed(IMAGES, 'Only images are accepted.')])
 
-
+"""
+Add to cart form
+"""
+class AddToCart(FlaskForm):
+    quantity = IntegerField('Quantity')
+    id = HiddenField('ID')
 
 """
 
@@ -73,10 +78,50 @@ Filter_by id
 def product(id):
     product = Product.query.filter_by(id=id).first()
 
-    return render_template('view-product.html', product=product)
+    form = AddToCart()
+
+    return render_template('view-product.html', product=product, form=form)
+
+"""
+Quick add item
+
+"""
+@app.route('/quick-add/<id>')
+def quick_add(id):
+    if 'cart' not in session:
+        session['cart'] = []
+
+    session['cart'].append({'id': id, 'quantity': 1})
+    session.modified = True
+
+    return redirect(url_for('index'))
+
+
+"""
+Add item to cart
+Save quantity and product ID session
+"""
+@app.route('/add-to-cart', methods=['POST'])
+def add_to_cart():
+    if 'cart' not in session:
+        session['cart'] = []
+
+    form = AddToCart()
+
+    if form.validate_on_submit():
+
+        session['cart'].append({'id': form.id.data, 'quantity': form.quantity.data})
+        session.modified = True
+
+    return redirect(url_for('index'))
+
+
 
 @app.route('/cart')
 def cart():
+
+    print(session['cart'])
+
     return render_template('cart.html')
 
 @app.route('/checkout')
