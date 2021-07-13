@@ -115,14 +115,48 @@ def add_to_cart():
 
     return redirect(url_for('index'))
 
+"""
+Update items on cart and grand total
 
+"""
 
 @app.route('/cart')
 def cart():
+    products = []
+    grand_total = 0
+    index = 0
+
+    for item in session['cart']:
+        product = Product.query.filter_by(id=item['id']).first()
+
+        quantity = int(item['quantity'])
+        total = quantity * product.price
+        grand_total += total 
+
+
+        products.append({'id': product.id, 'name': product.name, 'price': product.price, 'image': product.image, 'quantity': quantity, 'total': total, 'index': index})
+        index += 1
+
+
+    grand_total_plus_shipping = grand_total + 1000
+
+    return render_template('cart.html', products=products, grand_total=grand_total, grand_total_plus_shipping=grand_total_plus_shipping)
+
+"""
+
+Delete item from cart
+
+"""
+@app.route('/remove-from-cart/<index>')
+def remove_from_cart(index):
+    del session['cart'][int(index)]
+    session.modified = True
 
     print(session['cart'])
 
-    return render_template('cart.html')
+    return redirect(url_for('cart'))
+
+
 
 @app.route('/checkout')
 def checkout():
