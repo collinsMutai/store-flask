@@ -4,7 +4,7 @@ from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 from flask_uploads import UploadSet, configure_uploads, IMAGES
 from flask_wtf import FlaskForm
-from wtforms import IntegerField, StringField, TextAreaField, HiddenField
+from wtforms import IntegerField, StringField, TextAreaField, HiddenField, SelectField
 from flask_wtf.file import FileField, FileAllowed
 
 app = Flask(__name__)
@@ -38,6 +38,31 @@ class Product(db.Model):
     description = db.Column(db.String(500))
     image = db.Column(db.String(500))
 
+
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    reference = db.Column(db.String(5))
+    first_name = db.Column(db.String(20))
+    last_name = db.Column(db.String(20))
+    phone_number = db.Column(db.Integer)
+    email = db.Column(db.String(50))
+    address = db.Column(db.String(100))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(20))
+    country = db.Column(db.String(20))
+    status = db.Column(db.String(10))
+    payment_type = db.Column(db.String(10))
+    items = db.relationship('Order_Item', backref='order', lazy=True)
+
+
+class Order_Item(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    quantity = db.Column(db.Integer)
+
+
+
 """
 Create add product form using wtf
 
@@ -51,10 +76,49 @@ class AddProduct(FlaskForm):
 
 """
 Add to cart form
+
 """
 class AddToCart(FlaskForm):
     quantity = IntegerField('Quantity')
     id = HiddenField('ID')
+
+"""
+Checkout form
+
+"""
+class Checkout(FlaskForm):
+    first_name = StringField('First Name')
+    last_name = StringField('Last Name')
+    phone_number = StringField('Number')
+    email = StringField('Email')
+    address = StringField('Address')
+    city = StringField('City')
+    state = SelectField('State', choices=[('CA', 'Carlifornia'), ('WA', 'Washington'), ('NV', 'Nevada')])
+    country = SelectField('Country', choices=[('US', 'United States'), ('UK', 'United Kingdom'), ('FRA', 'France')])
+    payment_type = SelectField('PaymentType', choices=[('CK','Check'), ('WT', 'Wire Transfer')])
+
+
+def handle_cart():
+    products = []
+    grand_total = 0
+    index = 0
+
+    for item in session['cart']:
+        product = Product.query.filter_by(id=item['id']).first()
+
+        quantity = int(item['quantity'])
+        total = quantity * product.price
+        grand_total += total 
+
+
+        products.append({'id': product.id, 'name': product.name, 'price': product.price, 'image': product.image, \
+         'quantity': quantity, 'total': total, 'index': index})
+        index += 1
+
+
+    grand_total_plus_shipping = grand_total + 1000
+
+    return products, grand_total, grand_total_plus_shipping
 
 """
 
@@ -122,23 +186,8 @@ Update items on cart and grand total
 
 @app.route('/cart')
 def cart():
-    products = []
-    grand_total = 0
-    index = 0
 
-    for item in session['cart']:
-        product = Product.query.filter_by(id=item['id']).first()
-
-        quantity = int(item['quantity'])
-        total = quantity * product.price
-        grand_total += total 
-
-
-        products.append({'id': product.id, 'name': product.name, 'price': product.price, 'image': product.image, 'quantity': quantity, 'total': total, 'index': index})
-        index += 1
-
-
-    grand_total_plus_shipping = grand_total + 1000
+    products, grand_total, grand_total_plus_shipping = handle_cart()
 
     return render_template('cart.html', products=products, grand_total=grand_total, grand_total_plus_shipping=grand_total_plus_shipping)
 
@@ -157,10 +206,32 @@ def remove_from_cart(index):
     return redirect(url_for('cart'))
 
 
+"""
+Checkout
 
-@app.route('/checkout')
+"""
+
+@app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
-    return render_template('checkout.html')
+    # instantiate form and pass to template
+    form = Checkout()
+
+    if form.validate_on_submit():
+        products, grand_total, grand_total_plus_shipping = handle_cart()
+
+        order = Order()
+        form.populate_obj(order)
+        order.reference = 'AHJKK'
+        order.status = 'PENDING' 
+
+        for product in products:
+            order_item = Order_Item(quantity=product['quantity'], product_id=product['id'])
+            order.items.append(order_item)
+
+        db.session.add(order)
+        db.session.commit()
+
+    return render_template('checkout.html', form = form)
     
 
 """
