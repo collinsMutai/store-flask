@@ -6,6 +6,7 @@ from flask_uploads import UploadSet, configure_uploads, IMAGES
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, StringField, TextAreaField, HiddenField, SelectField
 from flask_wtf.file import FileField, FileAllowed
+import random
 
 app = Flask(__name__)
 
@@ -97,11 +98,13 @@ class Checkout(FlaskForm):
     country = SelectField('Country', choices=[('US', 'United States'), ('UK', 'United Kingdom'), ('FRA', 'France')])
     payment_type = SelectField('PaymentType', choices=[('CK','Check'), ('WT', 'Wire Transfer')])
 
+# Cart funcction 
 
 def handle_cart():
     products = []
     grand_total = 0
     index = 0
+    quantity_total = 0
 
     for item in session['cart']:
         product = Product.query.filter_by(id=item['id']).first()
@@ -109,7 +112,7 @@ def handle_cart():
         quantity = int(item['quantity'])
         total = quantity * product.price
         grand_total += total 
-
+        quantity_total += quantity
 
         products.append({'id': product.id, 'name': product.name, 'price': product.price, 'image': product.image, \
          'quantity': quantity, 'total': total, 'index': index})
@@ -118,7 +121,7 @@ def handle_cart():
 
     grand_total_plus_shipping = grand_total + 1000
 
-    return products, grand_total, grand_total_plus_shipping
+    return products, grand_total, grand_total_plus_shipping, quantity_total
 
 """
 
@@ -187,9 +190,9 @@ Update items on cart and grand total
 @app.route('/cart')
 def cart():
 
-    products, grand_total, grand_total_plus_shipping = handle_cart()
+    products, grand_total, grand_total_plus_shipping, quantity_total = handle_cart()
 
-    return render_template('cart.html', products=products, grand_total=grand_total, grand_total_plus_shipping=grand_total_plus_shipping)
+    return render_template('cart.html', products=products, grand_total=grand_total, grand_total_plus_shipping=grand_total_plus_shipping, quantity_total=quantity_total)
 
 """
 
@@ -215,13 +218,15 @@ Checkout
 def checkout():
     # instantiate form and pass to template
     form = Checkout()
+    # cart reference
+    products, grand_total, grand_total_plus_shipping, quantity_total = handle_cart()
 
     if form.validate_on_submit():
-        products, grand_total, grand_total_plus_shipping = handle_cart()
+        
 
         order = Order()
         form.populate_obj(order)
-        order.reference = 'AHJKK'
+        order.reference = ''.join([random.choice('ABCDE') for _ in range(5)])
         order.status = 'PENDING' 
 
         for product in products:
@@ -231,7 +236,12 @@ def checkout():
         db.session.add(order)
         db.session.commit()
 
-    return render_template('checkout.html', form = form)
+        session['cart'] = []
+        session.modified = True
+
+        return redirect(url_for('index'))
+
+    return render_template('checkout.html', form = form, products= products, grand_total=grand_total, grand_total_plus_shipping=grand_total_plus_shipping, quantity_total=quantity_total)
     
 
 """
