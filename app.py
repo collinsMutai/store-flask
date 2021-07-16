@@ -40,6 +40,9 @@ class Product(db.Model):
     image = db.Column(db.String(500))
 
 
+    orders = db.relationship('Order_Item', backref='product', lazy=True)
+
+
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reference = db.Column(db.String(5))
@@ -54,6 +57,15 @@ class Order(db.Model):
     status = db.Column(db.String(10))
     payment_type = db.Column(db.String(10))
     items = db.relationship('Order_Item', backref='order', lazy=True)
+
+    
+    def order_total(self):
+        return db.session.query(db.func.sum(Order_Item.quantity * Product.price)).join(Product).filter(Order_Item.order_id == self.id).scalar() + 1000
+
+
+    def quantity_total(self):
+        return db.session.query(db.func.sum(Order_Item.quantity)).filter(Order_Item.order_id == self.id).scalar() 
+
 
 
 class Order_Item(db.Model):
@@ -210,7 +222,7 @@ def remove_from_cart(index):
 
 
 """
-Checkout
+Checkout/  add submitted orders plus customer info to db
 
 """
 
@@ -254,8 +266,10 @@ Query available, in-stock and out of stock products
 def admin():
     products = Product.query.all()
     products_in_stock = Product.query.filter(Product.stock > 0).count()
+
+    orders = Order.query.all()
   
-    return render_template('admin/index.html', admin=True, products=products, products_in_stock=products_in_stock)
+    return render_template('admin/index.html', admin=True, products=products, products_in_stock=products_in_stock, orders=orders)
 
 """
 Post products to db
@@ -278,9 +292,11 @@ def add():
     
     return render_template('admin/add-product.html', admin=True, form=form)
 
-@app.route('/admin/order')
-def order():
-    return render_template('admin/view-order.html', admin=True)
+# order item page
+@app.route('/admin/order/<order_id>')
+def order(order_id):
+    order = Order.query.filter_by(id=int(order_id)).first()
+    return render_template('admin/view-order.html', admin=True, order=order)
 
 if __name__ == '__main__':
     manager.run()
