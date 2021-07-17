@@ -13,7 +13,7 @@ app = Flask(__name__)
 photos = UploadSet('photos', IMAGES)
 
 app.config['UPLOADED_PHOTOS_DEST'] = 'images'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:7749@localhost:5432/shopdb'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://oosxpuxucbgdhf:6acc1f8c52fba0b7635250f9dfca242bffb5505f2a7cff213be1ccb112824905@ec2-3-226-134-153.compute-1.amazonaws.com:5432/db58j7vq5731lk'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = 'mysecret'
